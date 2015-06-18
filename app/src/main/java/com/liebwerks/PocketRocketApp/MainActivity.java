@@ -26,6 +26,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.content.Intent;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
@@ -34,6 +35,9 @@ import android.content.Context;
 
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Iterator;
@@ -150,6 +154,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                                 sendRGBCommand.command = realoff;
                             }
                             new Thread(sendRGBCommand).start();
+                            Log.d("STATE","RED At: " + state.time);
                         }
                         else {
                             if (state.greenState != greenState) {
@@ -230,7 +235,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000l, 0, pocketRocketLocationListener);
         Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        Log.d("PocketRocketLocationListener", "Initial location: " + location.getLatitude() + ", " + location.getLongitude() + " Speed: " + location.getSpeed());
+        if(location == null) {
+            Log.d("PocketRocketLocationListener", "Can't get location");
+        }
+        else {
+            Log.d("PocketRocketLocationListener", "Initial location: " + location.getLatitude() + ", " + location.getLongitude() + " Speed: " + location.getSpeed());
+        }
 
         /* rem out the sensor stuff for now
         senSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -460,7 +470,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
                         Log.e("MediaPlayer", "Error preparing media for playback" + e.getMessage());
                     }
                     /* Save the recorded light sequence */
-                    writeLightSequenceToFile();
+                    //writeLightSequenceToFile();
                 }
                 return (true);
             }
@@ -483,7 +493,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         try {
           //Uri myUri = Uri.parse("file:///storage/emulated/0/Download/SeV15_SlingShotAlarm.mp3");
-          fis = new FileInputStream("/storage/emulated/0/SeV15_SlingShotAlarm.mp3");
+          //fis = new FileInputStream("/storage/emulated/0/SeV15_SlingShotAlarm.mp3");
+          fis = new FileInputStream("/storage/emulated/0/JoeWalshRockyMountainWay.mp3");
           //fis = new FileInputStream("/storage/emulated/0/Meghan Trainor - All About That Bass.mp3");
           //fis = new FileInputStream("/storage/emulated/0/bottle_90bpm_4-4time_610beats_T1yMuB.mp3");
           mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -497,7 +508,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     }
 
     public void writeLightSequenceToFile() {
-        String filename = "LightSequence_" + (System.currentTimeMillis() / 1000) + ".sev";
+        String filename = "LightSequence_" + (System.currentTimeMillis() / 1000) + ".txt";
 
 
         try {
@@ -562,9 +573,14 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         if (id == R.id.action_settings) {
             return true;
         }
+
         if(id == R.id.action_load) {
             performFileSearch();
+        }
 
+        if(id == R.id.action_save) {
+            /* Save the recorded light sequence */
+            writeLightSequenceToFile();
         }
 
         return super.onOptionsItemSelected(item);
@@ -635,7 +651,24 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             Uri uri = null;
             if (resultData != null) {
                 uri = resultData.getData();
-                Log.d("FileRead", "Uri: " + uri.toString());
+                Log.d("FileRead", "Uri: " + uri.getPath());
+                try {
+                    InputStream inputStream = getContentResolver().openInputStream(uri);
+                    BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+
+                    recordedSequence.clear();
+                    String line;
+                    while((line = br.readLine()) != null) {
+                        Log.d("FileRead", line);
+                        String[] read = line.split(",");
+                        recordedSequence.add(new ButtonState(Long.parseLong(read[0]), Boolean.valueOf(read[1]), Boolean.valueOf(read[2]),Boolean.valueOf(read[3]), Boolean.valueOf(read[4]), Boolean.valueOf(read[5]), Boolean.valueOf(read[6])));
+
+                    }
+                }
+                catch(Exception e) {
+                    Log.e("FileRead","Unable to get InputStream: " + e.getMessage());
+                }
+
             }
         }
         else {
