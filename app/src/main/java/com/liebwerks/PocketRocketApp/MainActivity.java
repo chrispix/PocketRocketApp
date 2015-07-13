@@ -1,6 +1,7 @@
 package com.liebwerks.PocketRocketApp;
 
 import android.graphics.Color;
+import android.media.Image;
 import android.net.wifi.WifiManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -32,6 +33,7 @@ import java.io.FileOutputStream;
 
 import android.os.Handler;
 import android.content.Context;
+import android.widget.ImageButton;
 
 
 import java.io.File;
@@ -73,7 +75,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
             yellowButton,
             purpleButton;
 
-    Button recordButton,
+    ImageButton recordButton,
            stopButton,
            playButton,
            resetButton;
@@ -261,10 +263,10 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         yellowButton = (Button) findViewById(R.id.yellowButton);
         purpleButton = (Button) findViewById(R.id.purpleButton);
 
-        recordButton = (Button) findViewById(R.id.recordButton);
-        stopButton = (Button) findViewById(R.id.stopButton);
-        playButton = (Button) findViewById(R.id.playButton);
-        resetButton = (Button) findViewById(R.id.resetButton);
+        recordButton = (ImageButton) findViewById(R.id.recordButton);
+        stopButton = (ImageButton) findViewById(R.id.stopButton);
+        playButton = (ImageButton) findViewById(R.id.playButton);
+        resetButton = (ImageButton) findViewById(R.id.resetButton);
 
         redButton.getBackground().setColorFilter(0xFFFF0000, PorterDuff.Mode.MULTIPLY);
         greenButton.getBackground().setColorFilter(0xFF00FF00, PorterDuff.Mode.MULTIPLY);
@@ -540,7 +542,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
     }
 
-    public void setButtonState(Button button) {
+    public void setButtonState(ImageButton button) {
         if(button.equals(recordButton)) {
             button.setBackgroundColor(Color.RED);
             playButton.setBackgroundColor(Color.LTGRAY);
