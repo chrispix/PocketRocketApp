@@ -15,20 +15,21 @@ public class SendRGBCommand implements Runnable {
     SocketAddress address = null;
     Socket clientSocket = null;
     DataOutputStream outToServer = null;
+    /* @TODO: change hard coded IP address to a discovery or read from config file */
+    String ip = "192.168.0.29";
+    //byte [] ip={(byte)192,(byte)168,(byte)0,(byte)20};
+    //byte [] IP={(byte)10, (byte)10, (byte)123, (byte)3};
 
     public RgbCommand command;
 
     //protected String doInBackground(byte[]... command) {
     public void run() {
 
-        /* @TODO: change hard coded IP address to a discovery or read from config file */
-        byte [] IP={(byte)192,(byte)168,(byte)0,(byte)26};
-        //byte [] IP={(byte)10, (byte)10, (byte)123, (byte)3};
 
         if(clientSocket == null) {
             try {
 
-                address = new InetSocketAddress(InetAddress.getByAddress(IP), 5577);
+                address = new InetSocketAddress(InetAddress.getByName(ip), 5577);
                 clientSocket = new Socket();
                 clientSocket.connect(address, 4000);
                 outToServer = new DataOutputStream(clientSocket.getOutputStream());

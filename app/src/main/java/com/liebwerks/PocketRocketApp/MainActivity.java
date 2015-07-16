@@ -5,12 +5,14 @@ import android.media.Image;
 import android.net.wifi.WifiManager;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.os.Message;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.view.View;
 import android.graphics.PorterDuff;
 
@@ -19,6 +21,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnCompletionListener;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.app.Activity;
@@ -43,16 +46,22 @@ import java.io.InputStreamReader;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Iterator;
-
+import java.util.List;
+import java.util.Collections;
 import java.util.ArrayList;
 
 
 public class MainActivity extends ActionBarActivity implements SensorEventListener {
+    private static Context context;
     private static final int READ_REQUEST_CODE = 42;
+    private static final int LOAD_MUSIC_REQUEST_CODE = 43;
+
+    LinearLayout rl = null;
 
     int activePointerId;
     MediaPlayer mPlayer;
     FileInputStream fis;
+    InputStream inputStream;
 
     PocketRocketLocationListener pocketRocketLocationListener;
     SendRGBCommand sendRGBCommand;
@@ -82,6 +91,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
     ArrayList recordedSequence;
 
+    ArrayList<Integer> musicFileList;
+    Iterator musicFileListIterator = null;
+
+    ArrayList<Integer> lightsFileList;
+    Iterator lightsFileListIterator = null;
+
     long counter = 0l;
 
     Timer timer;
@@ -94,6 +109,14 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     boolean state = false;
 
     final Handler handler = new Handler();
+
+    int white = 0xFFFFFFFF;
+    int red = 0xFFFF0000;
+    int green = 0xFF00FF00;
+    int blue = 0xFF0000FF;
+    int orange = 0xFFFFA500;
+    int yellow = 0xFFFFFF00;
+    int purple = 0xFF8A2BE2;    
 
     byte[] offByteArray = {(byte)0x71,(byte)0x24, (byte)0x0f,(byte)0xa4};
     byte[] onByteArray = {(byte)0x71,(byte)0x23, (byte)0x0f,(byte)0xa3};//on!
@@ -113,6 +136,8 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     final RgbCommand realyellow = new RgbCommand("yellow",realyellowByteArray);
     final RgbCommand realpurple = new RgbCommand("purple",realpurpleByteArray);
     final RgbCommand realoff = new RgbCommand("realoff",realoffByteArray);
+
+    String musicFilename = "";
 
     Iterator playbackIterator;
 
@@ -221,16 +246,131 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         timer.schedule(timerTask, 50l, 50l); //
     }
 
+    protected void loadMusic(Integer resourceId) {
+        Log.d("loadMusic", "Loading resource ID " + resourceId);
+        mPlayer = new MediaPlayer().create(this, resourceId);
+        mPlayer.setOnCompletionListener(new OnCompletionListener() {
+            public void onCompletion(MediaPlayer mp) {
+                Log.d("COMPLETE", "Completion event 2");
+                if(musicFileListIterator.hasNext()) {
+                    loadMusic((Integer)musicFileListIterator.next());
+                    mPlayer.start();
+                }
+                if(lightsFileListIterator.hasNext()) {
+                    InputStream inputStream = context.getResources().openRawResource((Integer)lightsFileListIterator.next());
+                    loadLightShow(inputStream);
+                    //loadMusic((Integer)lightsFileListIterator.next()); !!!!
+                    //mPlayer.start();
+                }
+            }
+        });
+
+        mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        //mPlayer.setDataSource(inputStream.);
+        try {
+            //mPlayer.prepare();
+        }
+        catch(Exception e) {
+            Log.e("loadMusic", "Failed to load music with resource ID " + resourceId);
+            e.printStackTrace();
+        }
+
+    }
+
+    protected void loadMusic(Uri uri) {
+        try {
+            inputStream = getContentResolver().openInputStream(uri);
+            //Uri myUri = Uri.parse("file:///storage/emulated/0/Download/SeV15_SlingShotAlarm.mp3");
+            //fis = new FileInputStream("/storage/emulated/0/SeV15_SlingShotAlarm.mp3");
+            //fis = new FileInputStream("/storage/emulated/0/JoeWalshRockyMountainWay.mp3");
+            //fis = new FileInputStream("/storage/emulated/0/Meghan Trainor - All About That Bass.mp3");
+            //fis = new FileInputStream("/storage/emulated/0/bottle_90bpm_4-4time_610beats_T1yMuB.mp3");
+            //fis = new FileInputStream(filename);
+
+            mPlayer.reset();
+            mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mPlayer.setDataSource(this, uri);
+            //mPlayer.setDataSource(inputStream.);
+            mPlayer.prepare();
+        }
+        catch(Exception e) {
+            Log.e("MediaPlayer", "Could not load file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+     void loadMusic(String filename) {
+        try {
+            mPlayer.reset();
+            mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mPlayer.setDataSource(filename);
+            mPlayer.prepare();
+
+        }
+        catch(Exception e) {
+            Log.e("MediaPlayer", "Could not load file" + e.getMessage());
+        }
+    }
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        MainActivity.context = getApplicationContext();
+
+        musicFileList = new ArrayList<Integer>();
+        musicFileList.add(R.raw.desk_bell_sound);
+        musicFileList.add(R.raw.polaris_audio_vo1);
+        musicFileList.add(R.raw.polaris_audio_music1);
+        musicFileList.add(R.raw.polaris_audio_vo2);
+        musicFileList.add(R.raw.polaris_audio_music2);
+        musicFileList.add(R.raw.polaris_audio_vo3);
+        musicFileList.add(R.raw.polaris_audio_music3);
+        musicFileList.add(R.raw.polaris_audio_vo4);
+        musicFileList.add(R.raw.polaris_audio_music4);
+        musicFileList.add(R.raw.polaris_audio_vo5);
+
+        lightsFileList = new ArrayList<Integer>();
+        lightsFileList.add(R.raw.desk_bell_lights);
+        lightsFileList.add(R.raw.polaris_lights_vo1);
+        //lightShowFileList.add(R.raw.polaris_lights_music1);
+        //lightShowFileList.add(R.raw.polaris_lights_vo2);
+        //lightShowFileList.add(R.raw.polaris_lights_music2);
+        //lightShowFileList.add(R.raw.polaris_lights_vo3);
+        //lightShowFileList.add(R.raw.polaris_lights_music3);
+        //lightShowFileList.add(R.raw.polaris_lights_vo4);
+        //lightShowFileList.add(R.raw.polaris_lights_music4);
+        //lightShowFileList.add(R.raw.polaris_lights_vo5);
+
+        sendRGBCommand = new SendRGBCommand();
 
         /* included when hunting down the ip address of the light controller */
         WifiManager wm = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
         Log.d("IP",wm.getConnectionInfo().toString());
         Log.d("IP","IP address is: " + ip);
+
+        /* hack to set the ip address, whether it is connecting to access point (10...) or as member of network (192...) */
+        if(ip.toString().startsWith("10.10.123")) {
+            sendRGBCommand.ip = "10.10.123.3";
+        }
+        else {
+            sendRGBCommand.ip = "192.168.0.29";
+        }
+
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+
+        if (Intent.ACTION_SEND.equals(action) && type != null) {
+            handleSentStuff(intent);
+        }
+
+        //rl = (LinearLayout)findViewById(R.id.lay);
+
 
         /* Log the location of the app all the time */
         pocketRocketLocationListener = new PocketRocketLocationListener();
@@ -492,26 +632,27 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
 
         mPlayer = new MediaPlayer();
 
-
-        try {
-          //Uri myUri = Uri.parse("file:///storage/emulated/0/Download/SeV15_SlingShotAlarm.mp3");
-          //fis = new FileInputStream("/storage/emulated/0/SeV15_SlingShotAlarm.mp3");
-          fis = new FileInputStream("/storage/emulated/0/JoeWalshRockyMountainWay.mp3");
-          //fis = new FileInputStream("/storage/emulated/0/Meghan Trainor - All About That Bass.mp3");
-          //fis = new FileInputStream("/storage/emulated/0/bottle_90bpm_4-4time_610beats_T1yMuB.mp3");
-          mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-
-          mPlayer.setDataSource(fis.getFD());
-          mPlayer.prepare();
+        /* initial load of music */
+        musicFileListIterator = musicFileList.iterator();
+        if(musicFileListIterator.hasNext()) {
+            loadMusic((Integer)musicFileListIterator.next());
         }
-        catch(Exception e) {
-            Log.e("MediaPlayer", "Could not load file" + e.getMessage());
+
+        /* initial load of lights */
+        lightsFileListIterator = lightsFileList.iterator();
+        if(lightsFileListIterator.hasNext()) {
+            InputStream inputStream = context.getResources().openRawResource((Integer)lightsFileListIterator.next());
+            loadLightShow(inputStream);
         }
     }
 
-    public void writeLightSequenceToFile() {
-        String filename = "LightSequence_" + (System.currentTimeMillis() / 1000) + ".txt";
+    public void handleSentStuff(Intent intent) {
+        Log.d("INTENT", intent.getData().toString());
+    }
 
+
+    public void writeLightSequenceToFile() {
+        String filename = musicFilename + "_" + (System.currentTimeMillis() / 1000) + ".txt";
 
         try {
             /* @TODO: get the real path of the storage location */
@@ -564,6 +705,18 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         return true;
     }
 
+    public Handler _handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            Log.d("MESSAGE", "Handler.handleMessage(): msg=" + msg);
+
+            if(rl != null) {
+                rl.setBackgroundColor(msg.what);
+            }
+        }
+    };
+
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -577,8 +730,12 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         }
 
         if(id == R.id.action_load) {
-            performFileSearch();
+            performFileSearchForLightShow();
         }
+
+        if(id == R.id.action_load_music) {
+            performFileSearchForMusic();
+        }        
 
         if(id == R.id.action_save) {
             /* Save the recorded light sequence */
@@ -627,7 +784,7 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
     }
 
     /* @TODO: pick the light sequence to load */
-    public void performFileSearch() {
+    public void performFileSearchForLightShow() {
 
         // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
         // browser.
@@ -646,36 +803,121 @@ public class MainActivity extends ActionBarActivity implements SensorEventListen
         startActivityForResult(intent, READ_REQUEST_CODE);
     }
 
+
+    public void performFileSearchForMusic() {
+
+        // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
+        // browser.
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+
+        // Filter to only show results that can be "opened", such as a
+        // file (as opposed to a list of contacts or timezones)
+        //intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        // Filter to show only images, using the image MIME data type.
+        // If one wanted to search for ogg vorbis files, the type would be "audio/ogg".
+        // To search for all documents available via installed storage providers,
+        // it would be "*/*".
+        intent.setType("*/*");
+
+        startActivityForResult(intent, LOAD_MUSIC_REQUEST_CODE);
+    }
+
+
     public void onActivityResult(int requestCode, int resultCode,
                                  Intent resultData) {
 
-        if (requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+        if (requestCode == LOAD_MUSIC_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             Uri uri = null;
             if (resultData != null) {
                 uri = resultData.getData();
-                Log.d("FileRead", "Uri: " + uri.getPath());
-                try {
-                    InputStream inputStream = getContentResolver().openInputStream(uri);
-                    BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+                Log.d("FileRead", "MUSIC Uri: " + uri.getLastPathSegment());
+                musicFilename = uri.getLastPathSegment().replace(".mp3", "").replace("primary:", "");
+                loadMusic(uri);
+                //MediaPlayer mPlayer = MediaPlayer.create(this,R.raw.polaris_audio_music1);
+                List<File> theList = getListFiles("/storage/emulated/0/Download/", musicFilename);
+                Iterator iterator = theList.iterator();
+                while(iterator.hasNext()) {
+                    File theFile = (File)iterator.next();
+                    Log.d("FILES", "the file is: " + theFile.getName());
+                }
 
-                    recordedSequence.clear();
-                    String line;
-                    while((line = br.readLine()) != null) {
-                        Log.d("FileRead", line);
-                        String[] read = line.split(",");
-                        recordedSequence.add(new ButtonState(Long.parseLong(read[0]), Boolean.valueOf(read[1]), Boolean.valueOf(read[2]),Boolean.valueOf(read[3]), Boolean.valueOf(read[4]), Boolean.valueOf(read[5]), Boolean.valueOf(read[6])));
-
+                /* Load the light show that is the last file in the list returned (newest, sorted by filename) */
+                if(theList.size() > 0) {
+                    try {
+                        Log.d("Load","Trying to load: " + theList.toArray()[theList.size() - 1]);
+                        InputStream inputStream = new FileInputStream((File)theList.toArray()[theList.size() - 1]);
+                        loadLightShow(inputStream);
+                    } catch (Exception e) {
+                        Log.e("ERROR", "Error loading light show");
+                        e.printStackTrace();
                     }
                 }
-                catch(Exception e) {
-                    Log.e("FileRead","Unable to get InputStream: " + e.getMessage());
+                else {
+                    Log.d("ERROR", "No light show to load");
                 }
 
+
+                //loadMusic("/storage/emulated/0/" + uri.getLastPathSegment());
             }
         }
         else {
-            Log.d("FileRead", "Something else happened: ignore");
+            if (requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+                Uri uri = null;
+                if (resultData != null) {
+                    uri = resultData.getData();
+                    Log.d("FileRead", "Uri: " + uri.getPath());
+                    try {
+                        InputStream inputStream = getContentResolver().openInputStream(uri);
+                        loadLightShow(inputStream);
+                    }
+                    catch(Exception e) {
+                        Log.e("ERROR", "Error loading light show for music");
+                    }
+
+                }
+            } else {
+                Log.d("FileRead", "Something else happened: ignore");
+            }
         }
+    }
+
+    void loadLightShow(InputStream inputStream) {
+        try {
+            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+
+            recordedSequence.clear();
+            String line;
+            while ((line = br.readLine()) != null) {
+                Log.d("loadLightShow", line);
+                String[] read = line.split(",");
+                recordedSequence.add(new ButtonState(Long.parseLong(read[0]), Boolean.valueOf(read[1]), Boolean.valueOf(read[2]), Boolean.valueOf(read[3]), Boolean.valueOf(read[4]), Boolean.valueOf(read[5]), Boolean.valueOf(read[6])));
+
+            }
+            playbackIterator = recordedSequence.iterator();
+        } catch (Exception e) {
+            Log.e("loadLightShow", "Unable to get InputStream: " + e.getMessage());
+        }
+    }
+
+    private List<File> getListFiles(String parentDir, String songTitle) {
+        File parentDirFile = new File(parentDir);
+        Log.d("getListFiles","It is " + parentDirFile);
+        ArrayList<File> inFiles = new ArrayList<File>();
+        File[] files = parentDirFile.listFiles();
+        Log.d("getListFiles","It is 2: " + files);
+        for (File file : files) {
+            if (file.isDirectory()) {
+                //ignore
+            } else {
+                Log.d("getListFiles", "Filename: " + file.getName());
+                if(file.getName().startsWith(songTitle)){
+                    inFiles.add(file);
+                }
+            }
+        }
+        Collections.sort(inFiles);
+        return inFiles;
     }
 }
 

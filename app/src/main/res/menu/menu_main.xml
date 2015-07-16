@@ -5,7 +5,10 @@
     <item android:id="@+id/action_settings" android:title="@string/action_settings"
         android:orderInCategory="100" app:showAsAction="never" />
 
-    <item android:id="@+id/action_load" android:title="Load"
+    <item android:id="@+id/action_load" android:title="Load Light Show"
+        android:orderInCategory="101" app:showAsAction="never" />
+
+    <item android:id="@+id/action_load_music" android:title="Load Music"
         android:orderInCategory="101" app:showAsAction="never" />
 
     <item android:id="@+id/action_save" android:title="Save"
